@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>视频/音频播放器</title>
+    <!-- 引入 Font Awesome 图标 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        /* 全局样式 */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 1200px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 2.5rem;
+            color: #fff;
+        }
+
+        /* 选项卡样式 */
+        .tabs {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+            gap: 10px;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border-radius: 25px;
+            background: rgba(255, 255, 255, 0.2);
+            transition: background 0.3s ease, transform 0.3s ease;
+            font-size: 1rem;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .tab:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .tab.active {
+            background: #fff;
+            color: #667eea;
+        }
+
+        /* 拖放区域样式 */
+        .drop-zone {
+            width: 100%;
+            height: 150px;
+            border: 2px dashed rgba(255, 255, 255, 0.5);
+            border-radius: 15px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 1.2rem;
+            margin-bottom: 20px;
+            transition: border-color 0.3s ease;
+        }
+
+        .drop-zone.dragover {
+            border-color: #fff;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .drop-zone i {
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+
+        /* 播放器容器样式 */
+        .player-container {
+            margin-bottom: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+        }
+
+        .player-container h2 {
+            margin-bottom: 15px;
+            font-size: 1.5rem;
+            color: #fff;
+        }
+
+        /* 播放器样式 */
+        video, audio {
+            width: 100%;
+            border-radius: 10px;
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        /* 音频控制条样式 */
+        .audio-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px;
+            border-radius: 10px;
+            margin-top: 10px;
+        }
+
+        .audio-controls button {
+            background: none;
+            border: none;
+            color: #fff;
+            font-size: 1.2rem;
+            cursor: pointer;
+            transition: color 0.3s ease;
+        }
+
+        .audio-controls button:hover {
+            color: #667eea;
+        }
+
+        .audio-controls input[type="range"] {
+            flex: 1;
+            height: 5px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 5px;
+            outline: none;
+            cursor: pointer;
+        }
+
+        .audio-controls input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 15px;
+            height: 15px;
+            background: #fff;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .volume-controls {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        /* 音频列表样式 */
+        .audio-list {
+            margin-top: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .audio-list h2 {
+            margin-bottom: 15px;
+            font-size: 1.5rem;
+            color: #fff;
+        }
+
+        .audio-list ul {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .audio-list li {
+            padding: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            margin-bottom: 10px;
+            cursor: pointer;
+            border-radius: 10px;
+            transition: background 0.3s ease;
+            color: #fff;
+        }
+
+        .audio-list li:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        /* 隐藏元素 */
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>视频/音频播放器</h1>
+
+        <!-- 选项卡 -->
+        <div class="tabs">
+            <div class="tab" id="video-tab" onclick="switchTab('video')">
+                <i class="fas fa-video"></i> 视频
+            </div>
+            <div class="tab" id="audio-tab" onclick="switchTab('audio')">
+                <i class="fas fa-music"></i> 音频
+            </div>
+        </div>
+
+        <!-- 文件拖放区域 -->
+        <div class="drop-zone" id="drop-zone">
+            <i class="fas fa-cloud-upload-alt"></i>
+            <span>将视频或音频文件拖放到此处，或点击选择文件</span>
+            <input type="file" id="file-input" accept="video/*, audio/*" multiple style="display: none;">
+        </div>
+
+        <!-- 视频播放器 -->
+        <div class="player-container" id="video-container">
+            <h2>视频播放器</h2>
+            <video id="video-player" controls class="hidden"></video>
+        </div>
+
+        <!-- 音频播放器 -->
+        <div class="player-container" id="audio-container">
+            <h2>音频播放器</h2>
+            <audio id="audio-player" class="hidden"></audio>
+            <!-- 自定义音频控制条 -->
+            <div class="audio-controls">
+                <button id="play-pause-btn">
+                    <i class="fas fa-play"></i>
+                </button>
+                <input type="range" id="progress-bar" value="0" min="0" max="100">
+                <div class="volume-controls">
+                    <button id="mute-btn">
+                        <i class="fas fa-volume-up"></i>
+                    </button>
+                    <input type="range" id="volume-bar" value="100" min="0" max="100">
+                </div>
+            </div>
+        </div>
+
+        <!-- 音频列表 -->
+        <div class="audio-list hidden" id="audio-list-container">
+            <h2>音频列表</h2>
+            <ul id="audio-list"></ul>
+        </div>
+    </div>
+
+    <script>
+        // 获取DOM元素
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+        const videoPlayer = document.getElementById('video-player');
+        const audioPlayer = document.getElementById('audio-player');
+        const audioListContainer = document.getElementById('audio-list-container');
+        const audioList = document.getElementById('audio-list');
+        const videoTab = document.getElementById('video-tab');
+        const audioTab = document.getElementById('audio-tab');
+        const videoContainer = document.getElementById('video-container');
+        const audioContainer = document.getElementById('audio-container');
+
+        // 自定义音频控制条相关元素
+        const playPauseBtn = document.getElementById('play-pause-btn');
+        const progressBar = document.getElementById('progress-bar');
+        const muteBtn = document.getElementById('mute-btn');
+        const volumeBar = document.getElementById('volume-bar');
+
+        // 存储音频文件的URL和名称
+        let audioFiles = [];
+
+        // 默认显示视频播放器
+        switchTab('video');
+
+        // 监听文件拖放事件
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('dragover');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            handleFiles(files);
+        });
+
+        // 监听文件选择事件
+        fileInput.addEventListener('change', (e) => {
+            const files = e.target.files;
+            handleFiles(files);
+        });
+
+        // 点击拖放区域触发文件选择
+        dropZone.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        // 处理文件
+        function handleFiles(files) {
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                const fileURL = URL.createObjectURL(file);
+
+                if (file.type.startsWith('video/')) {
+                    // 如果是视频文件
+                    videoPlayer.src = fileURL;
+                    switchTab('video'); // 切换到视频播放器
+                } else if (file.type.startsWith('audio/')) {
+                    // 如果是音频文件
+                    audioPlayer.src = fileURL;
+                    audioFiles.push({ name: file.name, url: fileURL });
+                    updateAudioList();
+                    switchTab('audio'); // 切换到音频播放器
+                } else {
+                    alert('请选择视频或音频文件！');
+                }
+            }
+        }
+
+        // 更新音频列表
+        function updateAudioList() {
+            audioList.innerHTML = ''; // 清空列表
+            audioFiles.forEach((file, index) => {
+                const li = document.createElement('li');
+                li.textContent = file.name;
+                li.addEventListener('click', () => {
+                    audioPlayer.src = file.url;
+                    audioPlayer.play();
+                    playPauseBtn.innerHTML = '<i class="fas fa-pause"></i>'; // 更新按钮状态
+                    switchTab('audio'); // 切换到音频播放器
+                });
+                audioList.appendChild(li);
+            });
+        }
+
+        // 切换选项卡
+        function switchTab(tab) {
+            if (tab === 'video') {
+                videoContainer.classList.remove('hidden');
+                audioContainer.classList.add('hidden');
+                audioListContainer.classList.add('hidden');
+                videoTab.classList.add('active');
+                audioTab.classList.remove('active');
+            } else if (tab === 'audio') {
+                videoContainer.classList.add('hidden');
+                audioContainer.classList.remove('hidden');
+                audioListContainer.classList.remove('hidden');
+                videoTab.classList.remove('active');
+                audioTab.classList.add('active');
+            }
+        }
+
+        // 自定义音频控制条功能
+        // 播放/暂停功能
+        playPauseBtn.addEventListener('click', () => {
+            if (audioPlayer.paused) {
+                audioPlayer.play();
+                playPauseBtn.innerHTML = '<i class="fas fa-pause"></i>';
+            } else {
+                audioPlayer.pause();
+                playPauseBtn.innerHTML = '<i class="fas fa-play"></i>';
+            }
+        });
+
+        // 更新进度条
+        audioPlayer.addEventListener('timeupdate', () => {
+            const progress = (audioPlayer.currentTime / audioPlayer.duration) * 100;
+            progressBar.value = progress;
+        });
+
+        // 拖动进度条跳转播放时间
+        progressBar.addEventListener('input', () => {
+            const time = (progressBar.value / 100) * audioPlayer.duration;
+            audioPlayer.currentTime = time;
+        });
+
+        // 音量控制
+        volumeBar.addEventListener('input', () => {
+            audioPlayer.volume = volumeBar.value / 100;
+            if (audioPlayer.volume === 0) {
+                muteBtn.innerHTML = '<i class="fas fa-volume-mute"></i>';
+            } else {
+                muteBtn.innerHTML = '<i class="fas fa-volume-up"></i>';
+            }
+        });
+
+        // 静音功能
+        muteBtn.addEventListener('click', () => {
+            if (audioPlayer.volume > 0) {
+                audioPlayer.volume = 0;
+                volumeBar.value = 0;
+                muteBtn.innerHTML = '<i class="fas fa-volume-mute"></i>';
+            } else {
+                audioPlayer.volume = 1;
+                volumeBar.value = 100;
+                muteBtn.innerHTML = '<i class="fas fa-volume-up"></i>';
+            }
+        });
+
+        // 确保音频播放时按钮状态正确
+        audioPlayer.addEventListener('play', () => {
+            playPauseBtn.innerHTML = '<i class="fas fa-pause"></i>';
+        });
+
+        audioPlayer.addEventListener('pause', () => {
+            playPauseBtn.innerHTML = '<i class="fas fa-play"></i>';
+        });
+    </script>
+
+</body>
+</html>
